@@ -1,0 +1,1 @@
+ plt.plot(x_train, p)
