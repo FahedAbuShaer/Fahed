@@ -4,31 +4,36 @@ sp = spmak(-4:8,[points points]);
 f = fnplt(sp,[0 4]);
 pg2 = polyshape(f(1,:)',f(2,:)','Simplify',true);
 tr = triangulation(pg2);
+tnodes = tr.Points';
+telements = tr.ConnectivityList';
 plot(pg2)
-b = 1;
 %%
 % Creating the Model for the PDE
 model = createpde;
 % Feeding it the triangular mesh
-model.geometryFromMesh(tr.Points', tr.ConnectivityList')
+model.geometryFromMesh(tnodes, telements)
 % Applying Dirichlet BC
 % Dirichlet:
 % hu=r
-% Robin boundary condition % n·(c∇u)+qu=g
+% Robin boundary condition 
+% n·(c∇u)+qu=g
 applyBoundaryCondition(model,'neumann','Edge',1,'g',1,'q',2);
-% applyBoundaryCondition(model,'dirichlet','Edge',1,'u', 0 );
+applyBoundaryCondition(model,'dirichlet','Edge',1,'u', 0 );
 generateMesh(model,"Hmax",0.05);
 pdemesh(model)
 %%
 % Defining the Equation Symbolically [two-dimensional problem u(x,y)]
+syms x
+syms y
+syms t
 syms a(x,y,t)
 syms b(x,y,t)
 syms f(a,b)
 syms g(a,b)
 syms Da
 syms Db
-pdeeq1 = -diff(a,t) + Da * laplacian(a,[x, y]) + f;
-pdeeq2 = -diff(b,t) + Db * laplacian(b, [x y]) + g;
+pdeeq[1] = -diff(u[1],t) + Da * laplacian(a,[x, y]) + f;
+pdeeq[2] = -diff(u[2],t) + Db * laplacian(b, [x, y]) + g;
 % Specifying the Coefficients Manually
 % This Requires you to follow the below:
 % solvepde solves PDEs of the form:
@@ -39,12 +44,16 @@ pdeeq2 = -diff(b,t) + Db * laplacian(b, [x y]) + g;
 % ∇·(c∇u)+au=λ2mu
 % Coefficient can be Specified Automatically
 coeffs = pdeCoefficients(pdeeq,u);
-specifyCoefficients(model,'m',coeffs.m,'d',1,'c',coeffs.c,'a',coeffs.a,'f',coeffs.f);
-r = [-Inf,1000];
-% Solving it and Finding the Lowest Eigenvalue
-setInitialConditions(model,1);
-t_list =0:0.01:0.8;
-results = solvepde(model,t_list);
+% define m and d
+specifyCoefficients(model,'m',0,'d',1,'c',coeffs1.c,'a',coeffs1.a,'f',coeffs1.f);
+results = solvepde(model);
+u = results.NodalSolution;
+msh = results.Mesh;
+
+%%
+figure
+pdeplot(msh, XYData=u)
+
 %%
 % Creating the Color Map for the Plot
 n = 100;
